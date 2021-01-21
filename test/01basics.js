@@ -299,7 +299,7 @@ test('Fail gracefully if fetching template from disk fails', function (t) {
 		});
 
 		// Inject middleware to screw with routed templates to trigger the error we are after
-		app.middleware.splice(2, 0, function (req, res, cb) {
+		app.middleware.splice(4, 0, function (req, res, cb) {
 			req.routed.templateFullPath = '/somewhere/that/does/not/exist.tmpl';
 			cb();
 		});
@@ -343,7 +343,7 @@ test('Fail gracefully if req.urlParsed does not get set', function (t) {
 		app = new App({log: log});
 
 		// Inject custom middleware to delete req.urlParsed
-		app.middleware.splice(1, 0, function (req, res, cb) {
+		app.middleware.splice(2, 0, function (req, res, cb) {
 			delete req.urlParsed;
 			cb();
 		});
@@ -507,7 +507,7 @@ test('Fail gracefully if a static file can not be fetched', function (t) {
 		app = new App({log: log});
 
 		// Inject middleware to screw with routed file to trigger the error we are after
-		app.middleware.splice(2, 0, function (req, res, cb) {
+		app.middleware.splice(4, 0, function (req, res, cb) {
 			req.routed.staticFullPath = '/somewhere/that/does/not/exist.txt';
 			cb();
 		});
@@ -915,6 +915,65 @@ test('Render page when templates in subfolders uses includes', function (t) {
 			if (err) return cb(err);
 			t.equal(response.statusCode, 200);
 			t.equal(body, '<html>\n\t<head><title>test</title></head>\n\t<body>\n\t\t<h1>This should be visible</h1>\n<p>boo</p>\n\t\t<p>torsk</p>\n\t</body>\n</html>');
+			cb();
+		});
+	});
+
+	// Close server
+	tasks.push(function (cb) {
+		app.stop(cb);
+	});
+
+	async.series(tasks, function (err) {
+		if (err) throw err;
+		t.end();
+	});
+});
+
+test('Return 404 if the requested path contains path traversing characters to prevent directory traversal', function (t) {
+	const tasks = [];
+
+	let app;
+
+	// Initialize app
+	tasks.push(function (cb) {
+		app = new App({
+			routerOptions: {basePath: __dirname + '/../test_environments/simple_app'},
+			log: log
+		});
+		cb();
+	});
+
+	tasks.push(function (cb) {
+		app.start(cb);
+	});
+
+	// Request
+	tasks.push(function (cb) {
+		request('http://localhost:' + app.base.httpServer.address().port + '/../../foo', function (err, response, body) {
+			if (err) return cb(err);
+			t.equal(response.statusCode, 404);
+			t.equal(body, '404 Not Found');
+			cb();
+		});
+	});
+
+	// Request
+	tasks.push(function (cb) {
+		request('http://localhost:' + app.base.httpServer.address().port + '/foo?q=&test=..', function (err, response, body) {
+			if (err) return cb(err);
+			t.equal(response.statusCode, 200);
+			t.equal(body, '<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t\t<title>Foo</title>\n\t</head>\n\t<body>\n\t\t<h1>Hello Foo!</h1>\n\t\t<p>yass</p>\n\t</body>\n</html>\n');
+			cb();
+		});
+	});
+
+	// Request
+	tasks.push(function (cb) {
+		request('http://localhost:' + app.base.httpServer.address().port + '/foo/../../../../../', function (err, response, body) {
+			if (err) return cb(err);
+			t.equal(response.statusCode, 404);
+			t.equal(body, '404 Not Found');
 			cb();
 		});
 	});

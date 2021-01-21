@@ -50,9 +50,10 @@ function App(options) {
 	// Only set middleware array if none is provided from the initiator
 	if (!Array.isArray(options.baseOptions.middleware)) {
 		options.baseOptions.middleware = [
+			function mwParseUrl(req, res, cb) { that.mwParseUrl(req, res, cb); },
 			function mwValidateRoute(req, res, cb) { that.mwValidateRoute(req, res, cb); },
-			function mwParse(req, res, cb) { that.mwParse(req, res, cb); },
 			function mwRoute(req, res, cb) { that.mwRoute(req, res, cb); },
+			function mwParse(req, res, cb) { that.mwParse(req, res, cb); },
 			function mwSendStatic(req, res, cb) { that.mwSendStatic(req, res, cb); },
 			function mwRunController(req, res, cb) { that.mwRunController(req, res, cb); },
 			function mwRender(req, res, cb) { that.mwRender(req, res, cb); },
@@ -96,13 +97,23 @@ App.prototype.mwValidateRoute = function mwValidateRoute(req, res, cb) {
 	const logPrefix = req.logPrefix + 'mwValidateRoute() - ';
 	const that = this;
 
-	// validating if the requested path contains path traversing characters to prevent directory traversal
-	var reqPath = decodeURI(req.url);
+	if (!req.urlParsed) {
+		const err = new Error('req.urlParsed is not set');
+		that.log.error(logPrefix + err.message);
+		that.log.verbose(err.stack);
+
+		return cb(err);
+	}
+
+	// Validating if the requested path contains path traversing characters to prevent directory traversal
+	const reqPath = req.urlParsed.pathname;
 	if (reqPath.includes('..')) {
 		that.log.verbose(logPrefix + 'Requested file outside the process directory (Directory Traversal Attempt).');
 		that.noTargetFound(req, res, cb);
+	} else {
+		cb();
 	}
-}
+};
 
 // Cleanup middleware, removing tmp file storage and more
 App.prototype.mwCleanup = function mwCleanup(req, res, cb) {
@@ -113,6 +124,15 @@ App.prototype.mwCleanup = function mwCleanup(req, res, cb) {
 	that.reqParser.clean(req, res, cb);
 };
 
+// Parsing middleware Url
+App.prototype.mwParseUrl = function mwParseUrl(req, res, cb) {
+	const that = this;
+
+	if (req.finished) return cb();
+
+	that.reqParser.parseUrl(req, res, cb);
+};
+
 // Parsing middleware
 App.prototype.mwParse = function mwParse(req, res, cb) {
 	const that = this;
@@ -120,6 +140,8 @@ App.prototype.mwParse = function mwParse(req, res, cb) {
 	req.logPrefix = topLogPrefix + 'req.uuid: ' + req.uuid + ' url: ' + req.url + ' - ';
 
 	if (req.finished) return cb();
+
+	if (req.routed && req.routed.staticFullPath) return cb();
 
 	that.reqParser.parse(req, res, cb);
 };
@@ -342,7 +364,7 @@ App.prototype.mwRunController = function mwRunController(req, res, cb) {
 
 		return cb();
 	} else if (!req.routed.controllerFullPath && !req.routed.templateFullPath) {
-		that.log.debug(logPrefix + 'Either controller nor template found for given url, running that.noTargetFound()');
+		that.log.debug(logPrefix + 'Neither controller nor template found for given url, running that.noTargetFound()');
 		that.noTargetFound(req, res, cb);
 	} else { // Must be a controller here
 		that.log.debug(logPrefix + 'Controller found, running');
@@ -377,6 +399,7 @@ App.prototype.mwSendStatic = function mwSendStatic(req, res, cb) {
 		});
 
 		sendStream.on('end', cb);
+		sendStream.on('close', cb);
 	} else {
 		return cb();
 	}
