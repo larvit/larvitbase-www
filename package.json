@@ -30,7 +30,7 @@
     "ejs": "git+https://github.com/larvit/ejs.git#24ea30276fdfa64737985e58031b6f3b4981b1e5",
     "larvitbase": "^3.1.3",
     "larvitfs": "^2.3.1",
-    "larvitreqparser": "^0.4.13",
+    "larvitreqparser": "^0.4.12",
     "larvitrouter": "^3.0.1",
     "larvitutils": "^2.1.1",
     "lodash": "^4.17.11",
