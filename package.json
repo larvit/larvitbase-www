@@ -33,7 +33,7 @@
     "larvitreqparser": "^0.4.13",
     "larvitrouter": "^3.0.1",
     "larvitutils": "^2.1.1",
-    "lodash": "^4.17.11",
+    "lodash": "^4.17.19",
     "send": "^0.17.0"
   },
   "devDependencies": {
