@@ -137,7 +137,26 @@ App.prototype.mwParseUrl = function mwParseUrl(req, res, cb) {
 App.prototype.mwParse = function mwParse(req, res, cb) {
 	const that = this;
 
-	req.logPrefix = topLogPrefix + 'req.uuid: ' + req.uuid + ' url: ' + req.url + ' - ';
+	let logUrl = req.url;
+
+	// Do not log password
+	if (req.urlParsed && req.urlParsed.query) {
+		const passwordKeys = Object.keys(req.urlParsed.query).filter(x => x.toLowerCase() === 'password');
+
+		for (const passKey of passwordKeys) {
+			const passVal = req.urlParsed.query[passKey];
+
+			if (Array.isArray(passVal)) {
+				for (const pass of passVal) {
+					logUrl = logUrl.replace(`${passKey}=${pass}`, `${passKey}=xxxxx`).replace(`${passKey}${pass}`, `${passKey}=xxxxx`);
+				}
+			} else {
+				logUrl = logUrl.replace(`${passKey}=${passVal}`, `${passKey}=xxxxx`).replace(`${passKey}${passVal}`, `${passKey}=xxxxx`);
+			}
+		}
+	}
+
+	req.logPrefix = topLogPrefix + 'req.uuid: ' + req.uuid + ' url: ' + logUrl + ' - ';
 
 	if (req.finished) return cb();
 
