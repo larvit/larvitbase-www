@@ -1,12 +1,12 @@
 'use strict';
 
-const request = require('request');
-const LUtils = require('larvitutils');
-const lUtils = new LUtils();
+const { Log } = require('larvitutils');
+const axios = require('axios').default;
 const async = require('async');
 const test = require('tape');
-const log = new lUtils.Log('no logging');
 const App = require(__dirname + '/../index.js');
+
+const log = new Log('no logging');
 
 test('Malfunctioning middleware', function (t) {
 	const tasks = [];
@@ -37,13 +37,10 @@ test('Malfunctioning middleware', function (t) {
 	});
 
 	// Try 500 request
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 500);
-			t.equal(body, '500 Internal Server Error');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/');
+		t.equal(response.status, 500);
+		t.equal(response.data, '500 Internal Server Error');
 	});
 
 	// Close server

@@ -1,5 +1,4 @@
 [![Build Status](https://travis-ci.org/larvit/larvitbase-www.svg)](https://travis-ci.org/larvit/larvitbase-www) [![Dependencies](https://david-dm.org/larvit/larvitbase-www.svg)](https://david-dm.org/larvit/larvitbase-www.svg)
-[![Coverage Status](https://coveralls.io/repos/github/larvit/larvitbase-www/badge.svg)](https://coveralls.io/github/larvit/larvitbase-www)
 
 # larvitbase-www
 
@@ -170,10 +169,6 @@ If __req.render__ is set to boolean false, it will have the same effect as provi
 
 If __req.finished__ is set to true, the builtin middlewares, including the controller-runner, will be bypassed. This is useful if an error is encountered of if some rate-limiter or other stuff should stop further execution of a request.
 
-## EJS special include()
-
-The EJS instance larvitbase-www is running is patched with a custom include() that uses [larvitfs](https://github.com/larvit/larvitfs) to look for templates.
-
 ## 404 and 500; no route found and internal errors
 
 ### 404
@@ -191,3 +186,9 @@ If a template exists named 500 that will be used.
 ## Todo
 
 * Set appropriate HTML headers
+
+# Changelog
+## 0.8.0
+- Removed larvitfs functionality (auto lookup of controllers/templates in node_modules)
+- Use latest lib versions
+- No custom EJS include, .ejs is the assumed extension now. For instance ```<%- include('inc/head') %>``` will resolve to ```inc/head.ejs``` (even if it was included from a file named .tmpl).

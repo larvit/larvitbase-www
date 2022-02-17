@@ -1,12 +1,15 @@
 'use strict';
 
-const request = require('request');
-const LUtils = require('larvitutils');
-const lUtils = new LUtils();
+const { Log } = require('larvitutils');
+const axios = require('axios').default;
 const async = require('async');
 const test = require('tape');
-const log = new lUtils.Log('no logging');
 const App = require(__dirname + '/../index.js');
+
+const log = new Log('no logging');
+
+// Do all status codes are considered valid (no exception thrown)
+axios.defaults.validateStatus = () => true;
 
 test('Start with no options at all', function (t) {
 	const tasks = [];
@@ -17,13 +20,10 @@ test('Start with no options at all', function (t) {
 	});
 
 	// All requests should be 404 by default
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 404);
-			t.equal(body, '404 Not Found');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/');
+		t.equal(response.status, 404);
+		t.equal(response.data, '404 Not Found');
 	});
 
 	// Close server
@@ -56,13 +56,10 @@ test('Get a response from a controller', function (t) {
 	});
 
 	// Try 200 request
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 200);
-			t.equal(body, '{"foo":"bar"}');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/');
+		t.equal(response.status, 200);
+		t.deepEqual(response.data, {foo: 'bar'});
 	});
 
 	// Close server
@@ -95,13 +92,10 @@ test('Get a response from a controller on /.json', function (t) {
 	});
 
 	// Try 200 request
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/.json', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 200);
-			t.equal(body, '{"foo":"bar"}');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/.json');
+		t.equal(response.status, 200);
+		t.deepEqual(response.data, {foo: 'bar'});
 	});
 
 	// Close server
@@ -134,13 +128,10 @@ test('404 with custom template', function (t) {
 	});
 
 	// Try 200 request
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/nowhere', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 404);
-			t.equal(body.trim(), 'There is no page here');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/nowhere');
+		t.equal(response.status, 404);
+		t.equal(response.data.trim(), 'There is no page here');
 	});
 
 	// Close server
@@ -178,13 +169,10 @@ test('Finish a request early', function (t) {
 	});
 
 	// Request special controller for this test
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 200);
-			t.equal(body, 'bosse');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/');
+		t.equal(response.status, 200);
+		t.equal(response.data, 'bosse');
 	});
 
 	// Close server
@@ -217,23 +205,17 @@ test('Render a template (without controller)', function (t) {
 	});
 
 	// Try 200 request
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 200);
-			t.equal(body, '<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t\t<title>Base</title>\n\t</head>\n\t<body>\n\t\t<h1>Hello World!</h1>\n\t</body>\n</html>\n');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/');
+		t.equal(response.status, 200);
+		t.equal(response.data, '<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t\t<title>Base</title>\n\t</head>\n\t<body>\n\t\t<h1>Hello World!</h1>\n\t</body>\n</html>\n');
 	});
 
 	// Try it again to get the cached template function
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 200);
-			t.equal(body, '<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t\t<title>Base</title>\n\t</head>\n\t<body>\n\t\t<h1>Hello World!</h1>\n\t</body>\n</html>\n');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/');
+		t.equal(response.status, 200);
+		t.equal(response.data, '<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t\t<title>Base</title>\n\t</head>\n\t<body>\n\t\t<h1>Hello World!</h1>\n\t</body>\n</html>\n');
 	});
 
 	// Close server
@@ -266,13 +248,10 @@ test('Use print function', function (t) {
 	});
 
 	// Try 200 request
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/foo', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 200);
-			t.equal(body, '<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t\t<title>Foo</title>\n\t</head>\n\t<body>\n\t\t<h1>Hello Foo!</h1>\n\t\t<p>yass</p>\n\t</body>\n</html>\n');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/foo');
+		t.equal(response.status, 200);
+		t.equal(response.data, '<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t\t<title>Foo</title>\n\t</head>\n\t<body>\n\t\t<h1>Hello Foo!</h1>\n\t\t<p>yass</p>\n\t</body>\n</html>\n');
 	});
 
 	// Close server
@@ -312,13 +291,10 @@ test('Fail gracefully if fetching template from disk fails', function (t) {
 	});
 
 	// Try 200 request
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/foo', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 500);
-			t.equal(body, '500 Internal Server Error');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/foo');
+		t.equal(response.status, 500);
+		t.equal(response.data, '500 Internal Server Error');
 	});
 
 	// Close server
@@ -343,7 +319,7 @@ test('Fail gracefully if req.urlParsed does not get set', function (t) {
 		app = new App({log: log});
 
 		// Inject custom middleware to delete req.urlParsed
-		app.middleware.splice(2, 0, function (req, res, cb) {
+		app.middleware.splice(1, 0, function (req, res, cb) {
 			delete req.urlParsed;
 			cb();
 		});
@@ -356,13 +332,10 @@ test('Fail gracefully if req.urlParsed does not get set', function (t) {
 	});
 
 	// Request special controller for this test
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 500);
-			t.equal(body, '500 Internal Server Error');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/');
+		t.equal(response.status, 500);
+		t.equal(response.data, '500 Internal Server Error');
 	});
 
 	// Close server
@@ -395,13 +368,10 @@ test('Return static file contents', function (t) {
 	});
 
 	// Get the file
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/womp.txt', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 200);
-			t.equal(body, 'wamp\n');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/womp.txt');
+		t.equal(response.status, 200);
+		t.equal(response.data, 'wamp\n');
 	});
 
 	// Close server
@@ -434,13 +404,10 @@ test('Get static json file', function (t) {
 	});
 
 	// Get the file
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/file.json', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 200);
-			t.equal(JSON.stringify(JSON.parse(body)), '{"maff":"lon"}');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/file.json');
+		t.equal(response.status, 200);
+		t.equal(JSON.stringify(response.data), '{"maff":"lon"}');
 	});
 
 	// Close server
@@ -477,13 +444,10 @@ test('Request static json and return 500 on router failure', function (t) {
 	});
 
 	// Get the file
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/file.json', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 500);
-			t.equal(body, '500 Internal Server Error');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/file.json');
+		t.equal(response.status, 500);
+		t.equal(response.data, '500 Internal Server Error');
 	});
 
 	// Close server
@@ -520,13 +484,10 @@ test('Fail gracefully if a static file can not be fetched', function (t) {
 	});
 
 	// Request special controller for this test
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/womp.txt', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 500);
-			t.equal(body, '500 Internal Server Error');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/womp.txt');
+		t.equal(response.status, 500);
+		t.equal(response.data, '500 Internal Server Error');
 	});
 
 	// Close server
@@ -559,13 +520,10 @@ test('Fail gracefully when controller data is non-stringable', function (t) {
 	});
 
 	// Request special controller for this test
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/fail', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 500);
-			t.equal(body, '500 Internal Server Error');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/fail');
+		t.equal(response.status, 500);
+		t.equal(response.data, '500 Internal Server Error');
 	});
 
 	// Close server
@@ -598,52 +556,10 @@ test('Send data from controller that is already stringified', function (t) {
 	});
 
 	// Request special controller for this test
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/noobj', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 200);
-			t.equal(body, 'bosse');
-			cb();
-		});
-	});
-
-	// Close server
-	tasks.push(function (cb) {
-		app.stop(cb);
-	});
-
-	async.series(tasks, function (err) {
-		if (err) throw err;
-		t.end();
-	});
-});
-
-test('Render page where templates are in modules', function (t) {
-	const tasks = [];
-
-	let app;
-
-	// Initialize app
-	tasks.push(function (cb) {
-		app = new App({
-			routerOptions: {basePath: __dirname + '/../test_environments/templates_in_modules'},
-			log: log
-		});
-		cb();
-	});
-
-	tasks.push(function (cb) {
-		app.start(cb);
-	});
-
-	// Try 200 request
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/foo', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 200);
-			t.equal(body, '<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t<title>Base</title>\n</head>\n\n\t<body>\n\t\t<h1>skabb</h1>\n<p>Giant squirrel</p>\n\t</body>\n</html>\n');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/noobj');
+		t.equal(response.status, 200);
+		t.equal(response.data, 'bosse');
 	});
 
 	// Close server
@@ -665,7 +581,7 @@ test('Render page, check exact path and fail without crashing', function (t) {
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			routerOptions: {basePath: __dirname + '/../test_environments/templates_in_modules'},
+			routerOptions: {basePath: __dirname + '/../test_environments/relative_templates'},
 			log: log
 		});
 		cb();
@@ -676,13 +592,10 @@ test('Render page, check exact path and fail without crashing', function (t) {
 	});
 
 	// Try 200 request
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/abs', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 500);
-			t.equal(body, '500 Internal Server Error');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/abs');
+		t.equal(response.status, 500);
+		t.equal(response.data, '500 Internal Server Error');
 	});
 
 	// Close server
@@ -704,7 +617,7 @@ test('Render page, check relative path and fail', function (t) {
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			routerOptions: {basePath: __dirname + '/../test_environments/templates_in_modules'},
+			routerOptions: {basePath: __dirname + '/../test_environments/relative_templates'},
 			log: log
 		});
 		cb();
@@ -715,13 +628,10 @@ test('Render page, check relative path and fail', function (t) {
 	});
 
 	// Try 200 request
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/lurk', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 500);
-			t.equal(body, '500 Internal Server Error');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/lurk');
+		t.equal(response.status, 500);
+		t.equal(response.data, '500 Internal Server Error');
 	});
 
 	// Close server
@@ -743,7 +653,7 @@ test('Fail to compile template, but do not crash', function (t) {
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			routerOptions: {basePath: __dirname + '/../test_environments/templates_in_modules'},
+			routerOptions: {basePath: __dirname + '/../test_environments/relative_templates'},
 			log: log
 		});
 		cb();
@@ -754,13 +664,10 @@ test('Fail to compile template, but do not crash', function (t) {
 	});
 
 	// Try 200 request
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/mekk', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 500);
-			t.equal(body, '500 Internal Server Error');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/mekk');
+		t.equal(response.status, 500);
+		t.equal(response.data, '500 Internal Server Error');
 	});
 
 	// Close server
@@ -782,7 +689,7 @@ test('Fail when rendering page due to circular includes', function (t) {
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			routerOptions: {basePath: __dirname + '/../test_environments/templates_in_modules'},
+			routerOptions: {basePath: __dirname + '/../test_environments/relative_templates'},
 			log: log
 		});
 		cb();
@@ -793,13 +700,10 @@ test('Fail when rendering page due to circular includes', function (t) {
 	});
 
 	// Try 200 request
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/bah', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 500);
-			t.equal(body, '500 Internal Server Error');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/bah');
+		t.equal(response.status, 500);
+		t.equal(response.data, '500 Internal Server Error');
 	});
 
 	// Close server
@@ -821,7 +725,7 @@ test('Fail when parsing arguments for include, but do not crash', function (t) {
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			routerOptions: {basePath: __dirname + '/../test_environments/templates_in_modules'},
+			routerOptions: {basePath: __dirname + '/../test_environments/relative_templates'},
 			log: log
 		});
 		cb();
@@ -832,13 +736,10 @@ test('Fail when parsing arguments for include, but do not crash', function (t) {
 	});
 
 	// Try 200 request
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/ass', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 500);
-			t.equal(body, '500 Internal Server Error');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/ass');
+		t.equal(response.status, 500);
+		t.equal(response.data, '500 Internal Server Error');
 	});
 
 	// Close server
@@ -860,7 +761,7 @@ test('Render page with included files containing dots in the file name', functio
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			routerOptions: {basePath: __dirname + '/../test_environments/templates_in_modules'},
+			routerOptions: {basePath: __dirname + '/../test_environments/relative_templates'},
 			log: log
 		});
 		cb();
@@ -871,13 +772,10 @@ test('Render page with included files containing dots in the file name', functio
 	});
 
 	// Try 200 request
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/asd', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 200);
-			t.equal(body, '<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t<title>Base</title>\n</head>\n\n\t<body>\n\t\t<h1>skabb</h1>\n<p>Giant squirrel</p>\n\t</body>\n</html>\n');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/asd');
+		t.equal(response.status, 200);
+		t.equal(response.data, '<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t<title>Base</title>\n</head>\n\n\t<body>\n\t\t<h1>skabb</h1>\n<p>Giant squirrel</p>\n\t</body>\n</html>\n');
 	});
 
 	// Close server
@@ -910,13 +808,10 @@ test('Render page when templates in subfolders uses includes', function (t) {
 	});
 
 	// Try 200 request
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/test/untz', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 200);
-			t.equal(body, '<html>\n\t<head><title>test</title></head>\n\t<body>\n\t\t<h1>This should be visible</h1>\n<p>boo</p>\n\t\t<p>torsk</p>\n\t</body>\n</html>');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/test/untz');
+		t.equal(response.status, 200);
+		t.equal(response.data, '<html>\n\t<head><title>test</title></head>\n\t<body>\n\t\t<h1>This should be visible</h1>\n<p>boo</p>\n\t\t<p>torsk</p>\n\t</body>\n</html>');
 	});
 
 	// Close server
@@ -949,33 +844,118 @@ test('Return 404 if the requested path contains path traversing characters to pr
 	});
 
 	// Request
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/../../foo', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 404);
-			t.equal(body, '404 Not Found');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/../../foo');
+		t.equal(response.status, 404);
+		t.equal(response.data, '404 Not Found');
 	});
 
 	// Request
-	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/foo?q=&test=..', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 200);
-			t.equal(body, '<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t\t<title>Foo</title>\n\t</head>\n\t<body>\n\t\t<h1>Hello Foo!</h1>\n\t\t<p>yass</p>\n\t</body>\n</html>\n');
-			cb();
-		});
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/foo?q=&test=..');
+		t.equal(response.status, 200);
+		t.equal(response.data, '<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t\t<title>Foo</title>\n\t</head>\n\t<body>\n\t\t<h1>Hello Foo!</h1>\n\t\t<p>yass</p>\n\t</body>\n</html>\n');
 	});
 
 	// Request
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/foo/../../../../../');
+		t.equal(response.status, 404);
+		t.equal(response.data, '404 Not Found');
+	});
+
+	// Close server
 	tasks.push(function (cb) {
-		request('http://localhost:' + app.base.httpServer.address().port + '/foo/../../../../../', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode, 404);
-			t.equal(body, '404 Not Found');
-			cb();
+		app.stop(cb);
+	});
+
+	async.series(tasks, function (err) {
+		if (err) throw err;
+		t.end();
+	});
+});
+
+test('Expect 500 if controller throws an exception', function (t) {
+	const tasks = [];
+
+	let app;
+
+	// Initialize app
+	tasks.push(function (cb) {
+		app = new App({
+			routerOptions: {basePath: __dirname + '/../test_environments/simple_app'},
+			log: log
 		});
+		cb();
+	});
+
+	tasks.push(function (cb) {
+		app.start(cb);
+	});
+
+	// Request
+	tasks.push(async () => {
+		const response = await axios('http://localhost:' + app.base.httpServer.address().port + '/throws');
+		t.equal(response.status, 500);
+		t.equal(response.data, '500 Internal Server Error');
+	});
+
+	// Close server
+	tasks.push(function (cb) {
+		app.stop(cb);
+	});
+
+	async.series(tasks, function (err) {
+		if (err) throw err;
+		t.end();
+	});
+});
+
+test('Get a URL with password query param, password should be obfuscated', function (t) {
+	const tasks = [];
+
+	let app;
+
+	const loggedLines = [];
+	const logger = {
+		info: (msg) => loggedLines.push(msg),
+		error: (msg) => loggedLines.push(msg),
+		warn: (msg) => loggedLines.push(msg),
+		verbose: (msg) => loggedLines.push(msg),
+		debug: (msg) => loggedLines.push(msg),
+		silly: (msg) => loggedLines.push(msg)
+	};
+
+	// Initialize app
+	tasks.push(function (cb) {
+		app = new App({
+			routerOptions: {basePath: __dirname + '/../test_environments/get_a_response_from_a_controller'},
+			log: logger
+		});
+		cb();
+	});
+
+	tasks.push(function (cb) {
+		app.start(cb);
+	});
+
+	// Try with single password query param
+	tasks.push(async () => {
+		await axios('http://localhost:' + app.base.httpServer.address().port + '/?password=nisse');
+
+		t.ok(loggedLines.find(x => x.includes('password=xxxxx')), 'Logs should include "password=xxxxx"');
+		t.not(loggedLines.find(x => x.includes('password=nisse')), 'Logs should not include "password=nisse"');
+	});
+
+	// Try with multiple password query params
+	tasks.push(async () => {
+		loggedLines.splice(0, loggedLines.length);
+
+		await axios('http://localhost:' + app.base.httpServer.address().port + '/?password=nisse&password=olle');
+
+		t.ok(loggedLines.find(x => x.includes('password=xxxxx')), 'Logs should include "password=xxxxx"');
+		t.not(loggedLines.find(x => x.includes('password=nisse')), 'Logs should not include "password=nisse"');
+		t.not(loggedLines.find(x => x.includes('password=olle')), 'Logs should not include "password=olle"');
 	});
 
 	// Close server

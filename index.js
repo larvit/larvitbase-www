@@ -2,19 +2,14 @@
 
 const topLogPrefix = 'larvitbase-www: ./index.js: ';
 const ReqParser = require('larvitreqparser');
+const { Log } = require('larvitutils');
 const Router = require('larvitrouter');
 const LBase = require('larvitbase');
-const LUtils = require('larvitutils');
 const async = require('async');
 const send = require('send');
-const path = require('path');
 const ejs = require('ejs');
 const fs = require('fs');
 const _ = require('lodash');
-
-ejs.includeFile_org = ejs.includeFile;
-
-ejs.resolveInclude_org = ejs.resolveInclude;
 
 function App(options) {
 	const that = this;
@@ -26,8 +21,7 @@ function App(options) {
 	that.options = options;
 
 	if (!that.options.log) {
-		const lUtils = new LUtils();
-		that.options.log = new lUtils.Log();
+		that.options.log = new Log();
 	}
 
 	that.log = that.options.log;
@@ -68,6 +62,8 @@ function App(options) {
 
 // Internal server error. 500
 App.prototype.internalError = function internalError(req, res) {
+	if (req.finished) return;
+
 	res.statusCode = 500;
 	res.end('500 Internal Server Error');
 };
@@ -94,7 +90,9 @@ App.prototype.noTargetFound = function noTargetFound(req, res, cb) {
 };
 
 App.prototype.mwValidateRoute = function mwValidateRoute(req, res, cb) {
-	const logPrefix = req.logPrefix + 'mwValidateRoute() - ';
+	if (req.finished) return cb();
+
+	const logPrefix = topLogPrefix + 'mwValidateRoute() - ';
 	const that = this;
 
 	if (!req.urlParsed) {
@@ -179,83 +177,12 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 		return cb();
 	}
 
-	// Custom ejs includeFile that uses larvitfs to search through node_modules for templates
-	ejs.includeFile = function (filePath, options) {
-		const routerBasePath = path.resolve(that.router.options.basePath);
-		const routerLfs = that.router.options.lfs;
-
-		let filePathAbsolute;
-		let relativePath;
-
-		// First deduct the routers base path from the file in which this function is ran on
-
-		if (options.filename) {
-			relativePath = options.filename.substring(routerBasePath.length + 1);
-
-			// Remove possible node_modules/xxx
-			const pathParts = relativePath.split('/');
-
-			relativePath = '';
-			for (let i = 0; pathParts[i] !== undefined; i++) {
-				if (pathParts[i] === 'node_modules') {
-					i++;
-				} else if (pathParts[i + 1]) {
-					relativePath += pathParts[i] + '/';
-				}
-			}
-		} else {
-			relativePath = path.parse(req.routed.templateFullPath).dir.substring(routerBasePath.length + 1);
-		}
-
-		// If absolute path, we do not need to do anything extra, just run the default ejs.includeFile()
-		if (filePath.substring(0, 1) === '/') {
-			return ejs.includeFile_org(filePath, options);
-		}
-
-		filePathAbsolute = routerLfs.getPathSync(relativePath + '/' + filePath);
-
-		// Try with the extensions passed to the router
-		if (!filePathAbsolute && that.router && that.router.options && Array.isArray(that.router.options.paths.template.exts)) {
-			for (const ext of that.router.options.paths.template.exts) {
-				filePathAbsolute = routerLfs.getPathSync(relativePath + '/' + filePath + '.' + ext);
-				if (filePathAbsolute) break;
-			}
-		}
-
-		if (!filePathAbsolute) {
-			throw new Error('Can not find template matching "' + filePath + '"');
-		}
-
-		return ejs.includeFile_org(filePathAbsolute, options);
-	};
-
 	if (!that.compiledTemplates[req.routed.templateFullPath]) {
 		that.log.debug(logPrefix + 'Compiling template: ' + req.routed.templateFullPath);
-
-		// Custom ejs resolveInclude to resolve path based on larvitfs
-		/* This should be the winning solution, but it did not seem to work
-		ejs.resolveInclude = function (filePath, options) {
-			const parsedFilePath = path.parse(filePath);
-
-			let returnStr;
-
-			// If absolute path, we do not need to do anything extra, just run the default ejs.resolveInclude()
-			if (filePath.substring(0, 1) === '/') {
-				return ejs.resolveInclude_org(filePath, options);
-		 }
-
-			returnStr = ejs.resolveInclude_org(filePath, options);
-			//ejs.resolveInclude = ejs.resolveInclude_org;
-
-			return returnStr;
-	 };
-		*/
 
 		// Compile the template
 		tasks.push(function (cb) {
 			fs.readFile(req.routed.templateFullPath, function (err, str) {
-				const compileOpts = {outputFunctionName: 'print'};
-
 				let html;
 
 				if (err) {
@@ -267,7 +194,10 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 				html = str.toString();
 
 				try {
-					that.compiledTemplates[req.routed.templateFullPath] = ejs.compile(html, compileOpts);
+					that.compiledTemplates[req.routed.templateFullPath] = ejs.compile(html, {
+						outputFunctionName: 'print',
+						filename: req.routed.templateFullPath
+					});
 				} catch (err) {
 					that.log.error(logPrefix + 'Could not compile "' + req.routed.templateFullPath + '", err: ' + err.message);
 
@@ -298,21 +228,13 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 
 // Routing middleware
 App.prototype.mwRoute = function mwRoute(req, res, cb) {
-	const logPrefix = req.logPrefix + 'mwRoute() - ';
+	const logPrefix = topLogPrefix + 'mwRoute() - ';
 	const tasks = [];
 	const that = this;
 
 	let routeUrl;
 
 	if (req.finished) return cb();
-
-	if (!req.urlParsed) {
-		const err = new Error('req.urlParsed is not set');
-		that.log.error(logPrefix + err.message);
-		that.log.verbose(err.stack);
-
-		return cb(err);
-	}
 
 	routeUrl = req.urlParsed.pathname;
 	req.routed = {};
@@ -391,6 +313,8 @@ App.prototype.mwRunController = function mwRunController(req, res, cb) {
 			require(req.routed.controllerFullPath)(req, res, cb);
 		} catch (err) {
 			that.log.error(logPrefix + 'Got exception when trying to run controller: ' + req.routed.controllerFullPath + ' (are you sure that module.exports is a function in the controller?), err: ' + err.message);
+
+			return cb(err);
 		}
 	}
 };
@@ -405,8 +329,6 @@ App.prototype.mwSendStatic = function mwSendStatic(req, res, cb) {
 	if (req.routed.staticFullPath) {
 		const sendStream = send(req, req.routed.staticFullPath, {index: false});
 
-		req.finished = true;
-
 		that.log.debug(logPrefix + 'Static file found, streaming');
 
 		sendStream.pipe(res);
@@ -417,7 +339,12 @@ App.prototype.mwSendStatic = function mwSendStatic(req, res, cb) {
 			return cb(err);
 		});
 
-		sendStream.on('end', cb);
+		sendStream.on('end', () => {
+			req.finished = true;
+
+			return cb();
+		});
+
 		sendStream.on('close', cb);
 	} else {
 		return cb();
