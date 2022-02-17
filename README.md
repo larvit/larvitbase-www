@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/larvit/larvitbase-www.svg)](https://travis-ci.org/larvit/larvitbase-www) [![Dependencies](https://david-dm.org/larvit/larvitbase-www.svg)](https://david-dm.org/larvit/larvitbase-www.svg)
+[![Build Status](https://github.com/larvit/larvitbase-www/actions/workflows/actions.yml/badge.svg)](https://github.com/larvit/larvitbase-www/actions)
 
 # larvitbase-www
 
