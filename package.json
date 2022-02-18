@@ -3,6 +3,7 @@
   "version": "0.8.0",
   "description": "Website framework based on larvitbase",
   "main": "index.js",
+  "files": ["*.js"],
   "scripts": {
     "lint": "eslint *.js test/*.js",
     "test:unit": "tape ./test/*.js",
