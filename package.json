@@ -41,7 +41,7 @@
   },
   "devDependencies": {
     "async": "3.2.3",
-    "axios": "0.26.0",
+    "axios": "0.26.1",
     "eslint": "8.11.0",
     "nyc": "15.1.0",
     "tape": "5.5.2"
