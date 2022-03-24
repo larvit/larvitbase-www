@@ -37,7 +37,7 @@
     "larvitrouter": "5.1.1",
     "larvitutils": "5.0.0",
     "lodash": "4.17.21",
-    "send": "0.17.2"
+    "send": "0.18.0"
   },
   "devDependencies": {
     "async": "3.2.3",
