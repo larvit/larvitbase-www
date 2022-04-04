@@ -35,7 +35,7 @@
     "larvitbase": "4.0.0",
     "larvitreqparser": "0.5.0",
     "larvitrouter": "5.1.1",
-    "larvitutils": "5.0.3",
+    "larvitutils": "5.0.4",
     "lodash": "4.17.21",
     "send": "0.18.0"
   },
