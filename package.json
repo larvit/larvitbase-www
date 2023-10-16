@@ -1,6 +1,6 @@
 {
   "name": "larvitbase-www",
-  "version": "0.8.45",
+  "version": "0.8.46",
   "description": "Website framework based on larvitbase",
   "main": "index.js",
   "files": ["*.js"],
@@ -44,6 +44,6 @@
     "axios": "0.27.2",
     "eslint": "8.51.0",
     "nyc": "15.1.0",
-    "tape": "5.7.0"
+    "tape": "5.7.1"
   }
 }
