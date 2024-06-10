@@ -1,6 +1,6 @@
 {
   "name": "larvitbase-www",
-  "version": "0.8.70",
+  "version": "0.8.71",
   "description": "Website framework based on larvitbase",
   "main": "index.js",
   "files": ["*.js"],
@@ -32,10 +32,10 @@
   "homepage": "https://github.com/larvit/larvitbase-www#readme",
   "dependencies": {
     "ejs": "3.1.10",
-    "larvitbase": "4.0.76",
-    "larvitreqparser": "0.5.82",
-    "larvitrouter": "5.1.81",
-    "larvitutils": "5.1.90",
+    "larvitbase": "4.0.81",
+    "larvitreqparser": "0.5.86",
+    "larvitrouter": "5.1.85",
+    "larvitutils": "5.1.94",
     "lodash": "4.17.21",
     "send": "0.18.0"
   },
