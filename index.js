@@ -35,6 +35,8 @@ function App(options) {
 
 	that.compiledTemplates = {};
 
+	that.cacheEjsCompile = that.options.cacheEjsCompile || false;
+
 	// Instantiate the router
 	that.router = new Router(that.options.routerOptions);
 
@@ -196,7 +198,8 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 				try {
 					that.compiledTemplates[req.routed.templateFullPath] = ejs.compile(html, {
 						outputFunctionName: 'print',
-						filename: req.routed.templateFullPath
+						filename: req.routed.templateFullPath,
+						cache: that.cacheEjsCompile
 					});
 				} catch (err) {
 					that.log.error(logPrefix + 'Could not compile "' + req.routed.templateFullPath + '", err: ' + err.message);

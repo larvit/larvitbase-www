@@ -1,6 +1,6 @@
 {
   "name": "larvitbase-www",
-  "version": "0.8.95",
+  "version": "0.8.96",
   "description": "Website framework based on larvitbase",
   "main": "index.js",
   "files": ["*.js"],
