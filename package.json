@@ -1,6 +1,6 @@
 {
   "name": "larvitbase-www",
-  "version": "0.8.123",
+  "version": "0.8.124",
   "description": "Website framework based on larvitbase",
   "main": "index.js",
   "files": ["*.js"],
@@ -35,7 +35,7 @@
     "larvitbase": "4.0.131",
     "larvitreqparser": "0.5.136",
     "larvitrouter": "5.1.132",
-    "larvitutils": "5.1.170",
+    "larvitutils": "5.1.171",
     "lodash": "4.17.21",
     "send": "1.2.0"
   },
